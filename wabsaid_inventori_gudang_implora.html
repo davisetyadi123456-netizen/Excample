@@ -1,0 +1,1307 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wabsaid Inventori Gudang Implora</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
+            background-size: cover;
+        }
+        .pill-btn {
+            border-radius: 9999px;
+            transition: all 0.2s ease-in-out;
+        }
+        .pill-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.3);
+        }
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+        }
+        .glass-input {
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+        .glass-input:focus {
+            background: rgba(30, 41, 59, 0.9);
+            border-color: #38bdf8;
+            outline: none;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.4);
+        }
+    </style>
+</head>
+<body class="h-full text-slate-100 flex flex-col overflow-x-hidden">
+
+    <div id="app" class="flex-1 flex flex-col h-full w-full relative">
+        <!-- Rendered dynamically via JavaScript -->
+    </div>
+
+    <script>
+        const DEFAULT_SETTINGS = {
+            ptName: "PT. Implora Sukses Abadi",
+            address: "Jl. Industri Gudang Raya No. 88, Cikarang, Bekasi",
+            checker: "DAVI",
+            drivers: ["SUKONO", "AREP", "JOKO", "AJI", "SAMSUL", "ROHANI", "ABU", "KIKI", "AGUS OT", "JUMARDIN", "SOLEH", "FARHAN", "WENDI", "RIFKI", "SAIPUL", "SULAIMAN", "HEMAWAN"],
+            vehicles: ["B 9901 UCS", "B 9980 UCS", "B 9917 UCS", "B 9919 UCS", "B 9037 UCQ", "B 9042 UCQ", "B 9039 UCQ", "B 9034 CCB", "B 9031 UCQ", "B 9949 UCS", "B 9952 UCS"],
+            deliveries: ["1", "2", "3", "4", "5", "6", "7"],
+            branches: ["FB PONDOK UNGGU", "FB PULOGADUNG", "FB BEKASI", "FB DAHAN MOGOT", "FB SERANG", "FB BOGOR", "FB KARAWANG", "FB SELATAN", "FB REMPOA", "FB BALERAJA", "FB TANGERANG"]
+        };
+
+        let appState = {
+            currentPage: 'halaman1',
+            currentSubModule: null,
+            currentCategory: null,
+            currentUser: { name: 'DAVI', role: 'Checker' },
+            sliderActive: true,
+            settings: JSON.parse(localStorage.getItem('implora_settings')) || DEFAULT_SETTINGS,
+            masterData: JSON.parse(localStorage.getItem('implora_master')) || [],
+            transactions: JSON.parse(localStorage.getItem('implora_transactions')) || [],
+            searchTerm: '',
+            currentPageNum: 1,
+            pageSize: 50,
+            activeCart: [],
+            modalMessage: null
+        };
+
+        function seedInitialData() {
+            if (appState.masterData.length === 0) {
+                const sampleItems = [];
+                const categoriesPencil = ['Lipstick', 'Serum', 'Mascara', 'Cushion', 'Eyebrow', 'Blush On', 'Foundation', 'Eyeliner', 'Loose Powder', 'Skincare'];
+                // Seed 1,000 items to fit comfortably within localStorage quota while ensuring high performance
+                for (let i = 1; i <= 1000; i++) {
+                    const cat = categoriesPencil[i % categoriesPencil.length];
+                    sampleItems.push({
+                        id: i,
+                        sku: `SKU-${10000 + i}`,
+                        kode: `IMP-${1000 + (i % 500)}`,
+                        nama: `Implora ${cat} Pro Edition ${i}`,
+                        isi: (i % 12 === 0) ? '24 Pcs/Box' : '12 Pcs/Box',
+                        jumlah: Math.floor(Math.random() * 500) + 50
+                    });
+                }
+                appState.masterData = sampleItems;
+                saveData();
+            }
+        }
+
+        function saveData() {
+            try {
+                localStorage.setItem('implora_settings', JSON.stringify(appState.settings));
+                localStorage.setItem('implora_master', JSON.stringify(appState.masterData));
+                localStorage.setItem('implora_transactions', JSON.stringify(appState.transactions));
+            } catch (e) {
+                console.warn('LocalStorage quota exceeded. Running in memory-safe mode.', e);
+            }
+        }
+
+        function updateDateTime() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('id-ID');
+            const dateStr = now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            
+            const timeEl = document.getElementById('live-time');
+            const dateEl = document.getElementById('live-date');
+            if (timeEl) timeEl.innerText = timeStr;
+            if (dateEl) dateEl.innerText = dateStr;
+        }
+        setInterval(updateDateTime, 1000);
+
+        function render() {
+            const appContainer = document.getElementById('app');
+            appContainer.innerHTML = '';
+
+            switch(appState.currentPage) {
+                case 'halaman1':
+                    appContainer.innerHTML = renderHalaman1();
+                    break;
+                case 'halaman2':
+                    appContainer.innerHTML = renderHalaman2();
+                    break;
+                case 'halaman3':
+                    appContainer.innerHTML = renderHalaman3();
+                    break;
+                case 'dashboard':
+                    appContainer.innerHTML = renderDashboard();
+                    break;
+                case 'pengaturan':
+                    appContainer.innerHTML = renderPengaturan();
+                    break;
+                case 'master_data':
+                    appContainer.innerHTML = renderMasterDataMenu();
+                    break;
+                case 'master_data_list':
+                    appContainer.innerHTML = renderMasterDataList();
+                    break;
+                case 'master_data_input':
+                    appContainer.innerHTML = renderMasterDataInput();
+                    break;
+                case 'aktifitas':
+                    appContainer.innerHTML = renderAktifitasMenu();
+                    break;
+                case 'cek_stok_harian':
+                    appContainer.innerHTML = renderCekStokHarian();
+                    break;
+                case 'cek_mutasi_keluar':
+                    appContainer.innerHTML = renderMutasiKeluar();
+                    break;
+                case 'cek_mutasi_masuk':
+                    appContainer.innerHTML = renderMutasiMasuk();
+                    break;
+                case 'pencarian_barang':
+                    appContainer.innerHTML = renderPencarianBarang();
+                    break;
+                case 'stok_opname':
+                    appContainer.innerHTML = renderStokOpname();
+                    break;
+                case 'laporan':
+                    appContainer.innerHTML = renderLaporan();
+                    break;
+                case 'transaksi':
+                    appContainer.innerHTML = renderTransaksiMenu();
+                    break;
+                case 'transaksi_form':
+                    appContainer.innerHTML = renderTransaksiForm();
+                    break;
+                default:
+                    appContainer.innerHTML = renderDashboard();
+            }
+            updateDateTime();
+        }
+
+        function renderHalaman1() {
+            return `
+                <div class="flex-1 flex items-center justify-center p-4">
+                    <div class="glass-panel p-8 rounded-3xl w-full max-w-md shadow-2xl">
+                        <div class="text-center mb-6">
+                            <div class="inline-block p-4 bg-sky-500/20 text-sky-400 rounded-full mb-3 text-3xl">
+                                <i class="fa-solid fa-warehouse"></i>
+                            </div>
+                            <h1 class="text-2xl font-bold text-white">INVENTORI GUDANG IMPLORA</h1>
+                            <p class="text-xs text-slate-400 mt-1">Sistem Manajemen Stok & Logistik Presisi</p>
+                        </div>
+                        <form onsubmit="handleLogin(event)" class="space-y-4">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">NAMA</label>
+                                <input type="text" id="login-nama" value="DAVI" required class="w-full px-4 py-3 rounded-xl glass-input text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">SANDI</label>
+                                <input type="password" id="login-sandi" value="12345" required class="w-full px-4 py-3 rounded-xl glass-input text-sm">
+                            </div>
+                            <button type="submit" class="w-full py-3 bg-sky-600 hover:bg-sky-500 text-white font-semibold pill-btn shadow-lg text-sm mt-4">
+                                MASUK
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            `;
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const nama = document.getElementById('login-nama').value;
+            const sandi = document.getElementById('login-sandi').value;
+            if(nama && sandi) {
+                appState.currentUser.name = nama;
+                appState.currentPage = 'halaman2';
+                render();
+            }
+        }
+
+        function renderHalaman2() {
+            return `
+                <div class="flex-1 flex items-center justify-center p-4">
+                    <div class="glass-panel p-10 rounded-3xl text-center max-w-lg w-full shadow-2xl">
+                        <h1 class="text-4xl font-extrabold text-white tracking-wider mb-8">SUGENG RAWOH</h1>
+                        <button onclick="appState.currentPage='halaman3'; render();" class="pill-btn px-8 py-4 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white font-bold text-lg shadow-xl w-full">
+                            MASUK SISTEM <i class="fa-solid fa-arrow-right ml-2"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderHalaman3() {
+            return `
+                <div class="flex-1 flex flex-col justify-between p-6">
+                    <div class="flex justify-between items-center text-xs font-semibold text-slate-300 glass-panel px-4 py-2 rounded-xl">
+                        <div id="live-time"><i class="fa-regular fa-clock mr-1"></i> 00:00:00</div>
+                        <div id="live-date"><i class="fa-regular fa-calendar mr-1"></i> Hari, Tanggal</div>
+                    </div>
+                    <div class="flex-1 flex flex-col items-center justify-center text-center">
+                        <div class="glass-panel p-10 rounded-3xl max-w-xl w-full shadow-2xl space-y-6">
+                            <h1 class="text-3xl font-extrabold text-white">SUGENG RAWOH, ${appState.currentUser.name}</h1>
+                            <p class="text-sm text-slate-300">Konfirmasi Kunci Geser Akses Operasional Gudang:</p>
+                            
+                            <div class="flex items-center justify-center space-x-4 py-4">
+                                <span class="text-xs font-bold text-slate-400">NON-AKTIF</span>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="kunci-geser" ${appState.sliderActive ? 'checked' : ''} onchange="appState.sliderActive = this.checked" class="sr-only peer">
+                                    <div class="w-14 h-7 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[4px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-sky-600"></div>
+                                </label>
+                                <span class="text-xs font-bold text-sky-400">AKTIF GUDANG</span>
+                            </div>
+
+                            <button onclick="goToDashboard()" class="pill-btn w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-base shadow-xl">
+                                BUKA DASHBOARD UTAMA
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function goToDashboard() {
+            const slider = document.getElementById('kunci-geser');
+            if (slider && !slider.checked) {
+                alert("Mohon aktifkan kunci geser terlebih dahulu untuk masuk ke dashboard.");
+                return;
+            }
+            appState.currentPage = 'dashboard';
+            render();
+        }
+
+        function renderTopBar() {
+            return `
+                <header class="glass-panel px-6 py-4 flex flex-wrap justify-between items-center gap-4 rounded-2xl m-4 shadow-lg">
+                    <div>
+                        <h2 class="text-lg font-bold text-white"><i class="fa-solid fa-warehouse text-sky-400 mr-2"></i> ${appState.settings.ptName}</h2>
+                        <p class="text-xs text-slate-400">${appState.settings.address} | Checker: <span class="text-sky-300 font-semibold">${appState.settings.checker}</span></p>
+                    </div>
+                    <div class="flex items-center gap-3 text-xs">
+                        <div class="hidden md:block text-right">
+                            <div id="live-time" class="font-semibold text-slate-200">00:00:00</div>
+                            <div id="live-date" class="text-slate-400">Tanggal</div>
+                        </div>
+                        <button onclick="backupData()" class="pill-btn px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium" title="Backup Data"><i class="fa-solid fa-cloud-arrow-down mr-1"></i> Backup</button>
+                        <button onclick="restoreDataPrompt()" class="pill-btn px-3 py-2 bg-amber-600 hover:bg-amber-500 text-white font-medium" title="Restore Data"><i class="fa-solid fa-cloud-arrow-up mr-1"></i> Restore</button>
+                        <button onclick="downloadDataCSV()" class="pill-btn px-3 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium" title="Download CSV"><i class="fa-solid fa-download mr-1"></i> Download</button>
+                        <button onclick="appState.currentPage='halaman1'; render();" class="pill-btn px-3 py-2 bg-rose-600 hover:bg-rose-500 text-white font-medium" title="Keluar"><i class="fa-solid fa-right-from-bracket"></i></button>
+                    </div>
+                </header>
+            `;
+        }
+
+        function renderDashboard() {
+            const totalItems = appState.masterData.length;
+            const totalStock = appState.masterData.reduce((acc, item) => acc + Number(item.jumlah || 0), 0);
+            const totalTransactions = appState.transactions.length;
+
+            return `
+                <div class="flex-1 flex flex-col p-4 max-w-7xl mx-auto w-full">
+                    ${renderTopBar()}
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div class="glass-panel p-6 rounded-2xl flex items-center space-x-4">
+                            <div class="p-4 bg-sky-500/20 text-sky-400 rounded-2xl text-2xl"><i class="fa-solid fa-boxes-stacked"></i></div>
+                            <div>
+                                <p class="text-xs text-slate-400 font-medium">Total Master Item SKU</p>
+                                <h3 class="text-2xl font-bold text-white">${totalItems.toLocaleString()}</h3>
+                            </div>
+                        </div>
+                        <div class="glass-panel p-6 rounded-2xl flex items-center space-x-4">
+                            <div class="p-4 bg-emerald-500/20 text-emerald-400 rounded-2xl text-2xl"><i class="fa-solid fa-cubes"></i></div>
+                            <div>
+                                <p class="text-xs text-slate-400 font-medium">Akumulasi Stok Gudang</p>
+                                <h3 class="text-2xl font-bold text-white">${totalStock.toLocaleString()} Pcs</h3>
+                            </div>
+                        </div>
+                        <div class="glass-panel p-6 rounded-2xl flex items-center space-x-4">
+                            <div class="p-4 bg-purple-500/20 text-purple-400 rounded-2xl text-2xl"><i class="fa-solid fa-receipt"></i></div>
+                            <div>
+                                <p class="text-xs text-slate-400 font-medium">Total Transaksi Tercatat</p>
+                                <h3 class="text-2xl font-bold text-white">${totalTransactions.toLocaleString()}</h3>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3 class="text-sm font-bold text-slate-300 uppercase tracking-wider mb-4 px-2"><i class="fa-solid fa-bars mr-2"></i> Menu Utama Gudang Implora</h3>
+
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                        <button onclick="appState.currentPage='pengaturan'; render();" class="pill-btn glass-panel p-5 flex flex-col items-center justify-center text-center hover:bg-slate-800/80 group border border-slate-700">
+                            <div class="p-3 bg-amber-500/20 text-amber-400 rounded-full mb-2 text-xl group-hover:scale-110 transition"><i class="fa-solid fa-gear"></i></div>
+                            <span class="text-sm font-bold text-white">PENGATURAN</span>
+                        </button>
+                        <button onclick="appState.currentPage='master_data'; render();" class="pill-btn glass-panel p-5 flex flex-col items-center justify-center text-center hover:bg-slate-800/80 group border border-slate-700">
+                            <div class="p-3 bg-sky-500/20 text-sky-400 rounded-full mb-2 text-xl group-hover:scale-110 transition"><i class="fa-solid fa-database"></i></div>
+                            <span class="text-sm font-bold text-white">MASTER DATA</span>
+                        </button>
+                        <button onclick="appState.currentPage='aktifitas'; render();" class="pill-btn glass-panel p-5 flex flex-col items-center justify-center text-center hover:bg-slate-800/80 group border border-slate-700">
+                            <div class="p-3 bg-indigo-500/20 text-indigo-400 rounded-full mb-2 text-xl group-hover:scale-110 transition"><i class="fa-solid fa-chart-line"></i></div>
+                            <span class="text-sm font-bold text-white">AKTIFITAS</span>
+                        </button>
+                        <button onclick="appState.currentPage='pencarian_barang'; render();" class="pill-btn glass-panel p-5 flex flex-col items-center justify-center text-center hover:bg-slate-800/80 group border border-slate-700">
+                            <div class="p-3 bg-emerald-500/20 text-emerald-400 rounded-full mb-2 text-xl group-hover:scale-110 transition"><i class="fa-solid fa-magnifying-glass"></i></div>
+                            <span class="text-sm font-bold text-white">PENCARIAN BARANG</span>
+                        </button>
+                        <button onclick="appState.currentPage='stok_opname'; render();" class="pill-btn glass-panel p-5 flex flex-col items-center justify-center text-center hover:bg-slate-800/80 group border border-slate-700">
+                            <div class="p-3 bg-rose-500/20 text-rose-400 rounded-full mb-2 text-xl group-hover:scale-110 transition"><i class="fa-solid fa-clipboard-check"></i></div>
+                            <span class="text-sm font-bold text-white">STOK OPNAME</span>
+                        </button>
+                        <button onclick="appState.currentPage='laporan'; render();" class="pill-btn glass-panel p-5 flex flex-col items-center justify-center text-center hover:bg-slate-800/80 group border border-slate-700">
+                            <div class="p-3 bg-teal-500/20 text-teal-400 rounded-full mb-2 text-xl group-hover:scale-110 transition"><i class="fa-solid fa-file-lines"></i></div>
+                            <span class="text-sm font-bold text-white">LAPORAN</span>
+                        </button>
+                        <button onclick="appState.currentPage='transaksi'; render();" class="pill-btn glass-panel p-5 flex flex-col items-center justify-center text-center hover:bg-slate-800/80 group border border-slate-700 col-span-2">
+                            <div class="p-3 bg-blue-500/20 text-blue-400 rounded-full mb-2 text-xl group-hover:scale-110 transition"><i class="fa-solid fa-right-left"></i></div>
+                            <span class="text-sm font-bold text-white">TRANSAKSI MASUK & KELUAR</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderPengaturan() {
+            return `
+                <div class="flex-1 flex flex-col p-4 max-w-4xl mx-auto w-full">
+                    ${renderTopBar()}
+                    <div class="glass-panel p-6 rounded-2xl shadow-xl space-y-6">
+                        <div class="flex justify-between items-center border-b border-slate-700 pb-4">
+                            <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-gear text-amber-400 mr-2"></i> Pengaturan & Konfigurasi Gudang</h3>
+                            <button onclick="appState.currentPage='dashboard'; render();" class="pill-btn px-4 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-semibold"><i class="fa-solid fa-arrow-left mr-1"></i> Kembali</button>
+                        </div>
+
+                        <form onsubmit="savePengaturan(event)" class="space-y-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-300 mb-1">Nama PT</label>
+                                    <input type="text" id="set-pt" value="${appState.settings.ptName}" class="w-full px-4 py-2.5 rounded-xl glass-input text-sm" required>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-300 mb-1">Nama Checker / Ceker</label>
+                                    <input type="text" id="set-checker" value="${appState.settings.checker}" class="w-full px-4 py-2.5 rounded-xl glass-input text-sm" required>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">Alamat Gudang</label>
+                                <textarea id="set-address" class="w-full px-4 py-2.5 rounded-xl glass-input text-sm" rows="2" required>${appState.settings.address}</textarea>
+                            </div>
+
+                            <div class="pt-4 border-t border-slate-700 grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="glass-panel p-4 rounded-xl">
+                                    <h4 class="text-xs font-bold text-sky-400 mb-2">Driver List (${appState.settings.drivers.length})</h4>
+                                    <p class="text-[11px] text-slate-400 mb-2">SUKONO, AREP, JOKO, AJI, SAMSUL, ROHANI, dll.</p>
+                                    <button type="button" onclick="promptAddDriver()" class="pill-btn w-full py-2 bg-sky-600 hover:bg-sky-500 text-xs font-bold">+ Tambah Driver</button>
+                                </div>
+                                <div class="glass-panel p-4 rounded-xl">
+                                    <h4 class="text-xs font-bold text-emerald-400 mb-2">Nomer Kendaraan (${appState.settings.vehicles.length})</h4>
+                                    <p class="text-[11px] text-slate-400 mb-2">B 9901 UCS, B 9980 UCS, dll.</p>
+                                    <button type="button" onclick="promptAddVehicle()" class="pill-btn w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-xs font-bold">+ Tambah Kendaraan</button>
+                                </div>
+                                <div class="glass-panel p-4 rounded-xl">
+                                    <h4 class="text-xs font-bold text-purple-400 mb-2">Pengirim Cabang (${appState.settings.branches.length})</h4>
+                                    <p class="text-[11px] text-slate-400 mb-2">FB PONDOK UNGGU, PULOGADUNG, BEKASI, dll.</p>
+                                    <button type="button" onclick="promptAddBranch()" class="pill-btn w-full py-2 bg-purple-600 hover:bg-purple-500 text-xs font-bold">+ Tambah Cabang</button>
+                                </div>
+                            </div>
+
+                            <div class="flex justify-end gap-3 pt-4 border-t border-slate-700">
+                                <button type="submit" class="pill-btn px-6 py-2.5 bg-sky-600 hover:bg-sky-500 text-white font-bold text-sm">Simpan Perubahan</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+        }
+
+        function savePengaturan(e) {
+            e.preventDefault();
+            appState.settings.ptName = document.getElementById('set-pt').value;
+            appState.settings.checker = document.getElementById('set-checker').value;
+            appState.settings.address = document.getElementById('set-address').value;
+            saveData();
+            alert("Pengaturan berhasil disimpan!");
+            render();
+        }
+
+        function promptAddDriver() {
+            const name = prompt("Masukkan nama driver baru:");
+            if (name) {
+                appState.settings.drivers.push(name.toUpperCase());
+                saveData();
+                render();
+            }
+        }
+        function promptAddVehicle() {
+            const v = prompt("Masukkan nomor kendaraan baru (contoh: B 1234 XYZ):");
+            if (v) {
+                appState.settings.vehicles.push(v.toUpperCase());
+                saveData();
+                render();
+            }
+        }
+        function promptAddBranch() {
+            const b = prompt("Masukkan nama pengirim cabang baru:");
+            if (b) {
+                appState.settings.branches.push(b.toUpperCase());
+                saveData();
+                render();
+            }
+        }
+
+        function renderMasterDataMenu() {
+            return `
+                <div class="flex-1 flex flex-col p-4 max-w-4xl mx-auto w-full">
+                    ${renderTopBar()}
+                    <div class="glass-panel p-6 rounded-2xl shadow-xl space-y-6">
+                        <div class="flex justify-between items-center border-b border-slate-700 pb-4">
+                            <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-database text-sky-400 mr-2"></i> Master Data Manajemen</h3>
+                            <button onclick="appState.currentPage='dashboard'; render();" class="pill-btn px-4 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-semibold"><i class="fa-solid fa-arrow-left mr-1"></i> Kembali</button>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <button onclick="appState.currentPage='master_data_list'; render();" class="pill-btn glass-panel p-8 flex flex-col items-center justify-center text-center hover:bg-slate-800 group border border-slate-700">
+                                <div class="p-4 bg-sky-500/20 text-sky-400 rounded-full mb-3 text-2xl group-hover:scale-110 transition"><i class="fa-solid fa-table-list"></i></div>
+                                <h4 class="text-base font-bold text-white mb-1">.DATA</h4>
+                                <p class="text-xs text-slate-400">Hasil inputan master data & stok gudang secara real-time (${appState.masterData.length} items)</p>
+                            </button>
+                            <button onclick="appState.currentPage='master_data_input'; render();" class="pill-btn glass-panel p-8 flex flex-col items-center justify-center text-center hover:bg-slate-800 group border border-slate-700">
+                                <div class="p-4 bg-emerald-500/20 text-emerald-400 rounded-full mb-3 text-2xl group-hover:scale-110 transition"><i class="fa-solid fa-file-arrow-up"></i></div>
+                                <h4 class="text-base font-bold text-white mb-1">.INPUT MASTERDATA</h4>
+                                <p class="text-xs text-slate-400">Template, import CSV, export, hapus massal, dan cetak SKU barang</p>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderMasterDataList() {
+            const filtered = appState.masterData.filter(item => 
+                item.nama.toLowerCase().includes(appState.searchTerm.toLowerCase()) || 
+                item.sku.toLowerCase().includes(appState.searchTerm.toLowerCase()) ||
+                item.kode.toLowerCase().includes(appState.searchTerm.toLowerCase())
+            );
+
+            const totalPages = Math.ceil(filtered.length / appState.pageSize) || 1;
+            if (appState.currentPageNum > totalPages) appState.currentPageNum = totalPages;
+            const startIdx = (appState.currentPageNum - 1) * appState.pageSize;
+            const currentItems = filtered.slice(startIdx, startIdx + appState.pageSize);
+
+            return `
+                <div class="flex-1 flex flex-col p-4 max-w-7xl mx-auto w-full">
+                    ${renderTopBar()}
+                    <div class="glass-panel p-6 rounded-2xl shadow-xl flex-1 flex flex-col">
+                        <div class="flex flex-wrap justify-between items-center gap-4 border-b border-slate-700 pb-4 mb-4">
+                            <div>
+                                <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-table-list text-sky-400 mr-2"></i> .DATA Master Barang Gudang</h3>
+                                <p class="text-xs text-slate-400">Total ditemukan: ${filtered.length.toLocaleString()} item</p>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <input type="text" placeholder="Cari SKU / Kode / Nama..." value="${appState.searchTerm}" oninput="appState.searchTerm=this.value; appState.currentPageNum=1; render();" class="px-4 py-2 rounded-xl glass-input text-xs w-64">
+                                <button onclick="appState.currentPage='master_data'; render();" class="pill-btn px-4 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-semibold"><i class="fa-solid fa-arrow-left mr-1"></i> Kembali</button>
+                            </div>
+                        </div>
+
+                        <div class="flex-1 overflow-x-auto overflow-y-auto max-h-[60vh] rounded-xl border border-slate-800">
+                            <table class="w-full text-left text-xs text-slate-200">
+                                <thead class="bg-slate-900 sticky top-0 uppercase text-slate-400 font-semibold">
+                                    <tr>
+                                        <th class="p-3">No</th>
+                                        <th class="p-3">SKU</th>
+                                        <th class="p-3">Kode Barang</th>
+                                        <th class="p-3">Nama Barang</th>
+                                        <th class="p-3">Isi</th>
+                                        <th class="p-3 text-right">Jumlah Stok</th>
+                                        <th class="p-3 text-center">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-800">
+                                    ${currentItems.length > 0 ? currentItems.map((item, idx) => `
+                                        <tr class="hover:bg-slate-800/50">
+                                            <td class="p-3 text-slate-400">${startIdx + idx + 1}</td>
+                                            <td class="p-3 font-mono font-medium text-sky-300">${item.sku}</td>
+                                            <td class="p-3 font-mono text-slate-300">${item.kode}</td>
+                                            <td class="p-3 font-medium text-white">${item.nama}</td>
+                                            <td class="p-3 text-slate-300">${item.isi}</td>
+                                            <td class="p-3 text-right font-bold text-emerald-400">${Number(item.jumlah).toLocaleString()}</td>
+                                            <td class="p-3 text-center">
+                                                <button onclick="deleteMasterItem(${item.id})" class="text-rose-400 hover:text-rose-300 p-1" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                                            </td>
+                                        </tr>
+                                    `).join('') : `<tr><td colspan="7" class="p-6 text-center text-slate-400">Tidak ada data ditemukan.</td></tr>`}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="flex justify-between items-center pt-4 mt-auto border-t border-slate-700 text-xs">
+                            <span class="text-slate-400">Halaman ${appState.currentPageNum} dari ${totalPages || 1}</span>
+                            <div class="flex gap-2">
+                                <button onclick="changePage(-1)" ${appState.currentPageNum <= 1 ? 'disabled class="opacity-50 cursor-not-allowed"' : ''} class="pill-btn px-4 py-2 bg-slate-700 hover:bg-slate-600 font-bold">Prev</button>
+                                <button onclick="changePage(1)" ${appState.currentPageNum >= totalPages ? 'disabled class="opacity-50 cursor-not-allowed"' : ''} class="pill-btn px-4 py-2 bg-sky-600 hover:bg-sky-500 font-bold">Next</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function changePage(direction) {
+            appState.currentPageNum += direction;
+            render();
+        }
+
+        function deleteMasterItem(id) {
+            if(confirm("Yakin ingin menghapus item ini?")) {
+                appState.masterData = appState.masterData.filter(i => i.id !== id);
+                saveData();
+                render();
+            }
+        }
+
+        function renderMasterDataInput() {
+            return `
+                <div class="flex-1 flex flex-col p-4 max-w-4xl mx-auto w-full">
+                    ${renderTopBar()}
+                    <div class="glass-panel p-6 rounded-2xl shadow-xl space-y-6">
+                        <div class="flex justify-between items-center border-b border-slate-700 pb-4">
+                            <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-file-arrow-up text-emerald-400 mr-2"></i> .INPUT MASTERDATA & Utilities</h3>
+                            <button onclick="appState.currentPage='master_data'; render();" class="pill-btn px-4 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-semibold"><i class="fa-solid fa-arrow-left mr-1"></i> Kembali</button>
+                        </div>
+
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <button onclick="downloadCSVTemplate()" class="pill-btn p-4 bg-sky-600/20 hover:bg-sky-600/40 border border-sky-500 text-sky-300 font-semibold text-xs flex flex-col items-center justify-center gap-2">
+                                <i class="fa-solid fa-file-arrow-down text-xl"></i> Download Template
+                            </button>
+                            <label class="pill-btn p-4 bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500 text-emerald-300 font-semibold text-xs flex flex-col items-center justify-center gap-2 cursor-pointer">
+                                <i class="fa-solid fa-file-import text-xl"></i> Import CSV / Excel
+                                <input type="file" accept=".csv" onchange="importCSV(event)" class="hidden">
+                            </label>
+                            <button onclick="exportMasterCSV()" class="pill-btn p-4 bg-amber-600/20 hover:bg-amber-600/40 border border-amber-500 text-amber-300 font-semibold text-xs flex flex-col items-center justify-center gap-2">
+                                <i class="fa-solid fa-file-export text-xl"></i> Export CSV
+                            </button>
+                            <button onclick="deleteAllMaster()" class="pill-btn p-4 bg-rose-600/20 hover:bg-rose-600/40 border border-rose-500 text-rose-300 font-semibold text-xs flex flex-col items-center justify-center gap-2">
+                                <i class="fa-solid fa-trash-can text-xl"></i> Hapus Semua
+                            </button>
+                        </div>
+
+                        <form onsubmit="addNewMasterItem(event)" class="glass-panel p-5 rounded-xl space-y-4 border border-slate-700">
+                            <h4 class="text-sm font-bold text-white"><i class="fa-solid fa-plus mr-2 text-sky-400"></i> Form Item Master Baru</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-300 mb-1">SKU</label>
+                                    <input type="text" id="new-sku" required class="w-full px-4 py-2 rounded-xl glass-input text-xs" placeholder="SKU-99999">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-300 mb-1">Kode Barang</label>
+                                    <input type="text" id="new-kode" required class="w-full px-4 py-2 rounded-xl glass-input text-xs" placeholder="IMP-001">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-300 mb-1">Nama Barang</label>
+                                    <input type="text" id="new-nama" required class="w-full px-4 py-2 rounded-xl glass-input text-xs" placeholder="Implora Lipstick...">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-300 mb-1">Isi (Kemasan)</label>
+                                    <input type="text" id="new-isi" required class="w-full px-4 py-2 rounded-xl glass-input text-xs" placeholder="12 Pcs/Box">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-300 mb-1">Jumlah Stok Awal</label>
+                                    <input type="number" id="new-jumlah" required class="w-full px-4 py-2 rounded-xl glass-input text-xs" placeholder="100">
+                                </div>
+                            </div>
+                            <div class="flex justify-end pt-2">
+                                <button type="submit" class="pill-btn px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs">Simpan Item Master</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+        }
+
+        function addNewMasterItem(e) {
+            e.preventDefault();
+            const newItem = {
+                id: Date.now(),
+                sku: document.getElementById('new-sku').value,
+                kode: document.getElementById('new-kode').value,
+                nama: document.getElementById('new-nama').value,
+                isi: document.getElementById('new-isi').value,
+                jumlah: parseInt(document.getElementById('new-jumlah').value) || 0
+            };
+            appState.masterData.unshift(newItem);
+            saveData();
+            alert("Item Master berhasil ditambahkan!");
+            appState.currentPage = 'master_data_list';
+            render();
+        }
+
+        function deleteAllMaster() {
+            if(confirm("PERINGATAN: Yakin ingin menghapus SELURUH master data?")) {
+                appState.masterData = [];
+                saveData();
+                render();
+            }
+        }
+
+        function downloadCSVTemplate() {
+            const csv = "SKU,Kode Barang,Nama Barang,Isi,Jumlah\nSKU-10001,IMP-001,Implora Lipstick Matte,12 Pcs/Box,150";
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', 'template_master_implora.csv');
+            a.click();
+        }
+
+        function exportMasterCSV() {
+            let csv = "SKU,Kode Barang,Nama Barang,Isi,Jumlah\n";
+            appState.masterData.forEach(i => {
+                csv += `"${i.sku}","${i.kode}","${i.nama}","${i.isi}",${i.jumlah}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', 'master_data_implora_export.csv');
+            a.click();
+        }
+
+        function importCSV(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                const text = evt.target.result;
+                const lines = text.split('\n');
+                let count = 0;
+                for (let i = 1; i < lines.length; i++) {
+                    const cols = lines[i].split(',');
+                    if (cols.length >= 5) {
+                        appState.masterData.push({
+                            id: Date.now() + i,
+                            sku: cols[0].replace(/"/g, '').trim(),
+                            kode: cols[1].replace(/"/g, '').trim(),
+                            nama: cols[2].replace(/"/g, '').trim(),
+                            isi: cols[3].replace(/"/g, '').trim(),
+                            jumlah: parseInt(cols[4]) || 0
+                        });
+                        count++;
+                    }
+                }
+                saveData();
+                alert(`Berhasil mengimpor ${count} item master baru!`);
+                render();
+            };
+            reader.readAsText(file);
+        }
+
+        function renderAktifitasMenu() {
+            return `
+                <div class="flex-1 flex flex-col p-4 max-w-4xl mx-auto w-full">
+                    ${renderTopBar()}
+                    <div class="glass-panel p-6 rounded-2xl shadow-xl space-y-6">
+                        <div class="flex justify-between items-center border-b border-slate-700 pb-4">
+                            <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-chart-line text-indigo-400 mr-2"></i> Menu Aktifitas Gudang</h3>
+                            <button onclick="appState.currentPage='dashboard'; render();" class="pill-btn px-4 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-semibold"><i class="fa-solid fa-arrow-left mr-1"></i> Kembali</button>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <button onclick="appState.currentPage='cek_stok_harian'; render();" class="pill-btn glass-panel p-8 flex flex-col items-center justify-center text-center hover:bg-slate-800 group border border-slate-700">
+                                <div class="p-4 bg-sky-500/20 text-sky-400 rounded-full mb-3 text-2xl group-hover:scale-110 transition"><i class="fa-solid fa-calendar-day"></i></div>
+                                <h4 class="text-base font-bold text-white mb-1">.CEK STOK HARIAN</h4>
+                                <p class="text-xs text-slate-400">Pantau transaksi keluar masuk dan sisa stok berdasarkan tanggal harian</p>
+                            </button>
+                            <button onclick="appState.currentPage='cek_mutasi_keluar'; render();" class="pill-btn glass-panel p-8 flex flex-col items-center justify-center text-center hover:bg-slate-800 group border border-slate-700">
+                                <div class="p-4 bg-rose-500/20 text-rose-400 rounded-full mb-3 text-2xl group-hover:scale-110 transition"><i class="fa-solid fa-truck-ramp-box"></i></div>
+                                <h4 class="text-base font-bold text-white mb-1">.CEK PENGELUARAN & MASUK</h4>
+                                <p class="text-xs text-slate-400">Mutasi barang keluar & masuk berdasarkan Nama Toko & Tanggal Bon</p>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderCekStokHarian() {
+            const today = new Date().toISOString().split('T')[0];
+            return `
+                <div class="flex-1 flex flex-col p-4 max-w-5xl mx-auto w-full">
+                    ${renderTopBar()}
+                    <div class="glass-panel p-6 rounded-2xl shadow-xl space-y-6">
+                        <div class="flex justify-between items-center border-b border-slate-700 pb-4">
+                            <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-calendar-day text-sky-400 mr-2"></i> .CEK STOK HARIAN</h3>
+                            <button onclick="appState.currentPage='aktifitas'; render();" class="pill-btn px-4 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-semibold"><i class="fa-solid fa-arrow-left mr-1"></i> Kembali</button>
+                        </div>
+
+                        <div class="flex gap-4 items-center">
+                            <label class="text-xs text-slate-300 font-medium">Pilih Tanggal:</label>
+                            <input type="date" id="filter-date" value="${today}" onchange="render()" class="px-4 py-2 rounded-xl glass-input text-xs">
+                        </div>
+
+                        <div class="overflow-x-auto rounded-xl border border-slate-800">
+                            <table class="w-full text-left text-xs text-slate-200">
+                                <thead class="bg-slate-900 uppercase text-slate-400 font-semibold">
+                                    <tr>
+                                        <th class="p-3">No Bon / Ref</th>
+                                        <th class="p-3">Tipe Transaksi</th>
+                                        <th class="p-3">Nama Barang</th>
+                                        <th class="p-3 text-right">Jumlah Keluar/Masuk</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-800">
+                                    ${appState.transactions.length > 0 ? appState.transactions.map(t => `
+                                        <tr class="hover:bg-slate-800/50">
+                                            <td class="p-3 font-mono text-sky-300">${t.noBon}</td>
+                                            <td class="p-3 uppercase font-bold text-amber-400">${t.type}</td>
+                                            <td class="p-3">${t.items.map(i => i.nama + ' (' + i.qty + 'x)').join(', ')}</td>
+                                            <td class="p-3 text-right font-bold text-emerald-400">${t.items.reduce((a,b)=>a+b.qty,0)} Pcs</td>
+                                        </tr>
+                                    `).join('') : `<tr><td colspan="4" class="p-6 text-center text-slate-400">Belum ada transaksi tercatat.</td></tr>`}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderMutasiKeluar() {
+            return `
+                <div class="flex-1 flex flex-col p-4 max-w-5xl mx-auto w-full">
+                    ${renderTopBar()}
+                    <div class="glass-panel p-6 rounded-2xl shadow-xl space-y-6">
+                        <div class="flex justify-between items-center border-b border-slate-700 pb-4">
+                            <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-truck-arrow-right text-rose-400 mr-2"></i> Mutasi Barang Keluar</h3>
+                            <button onclick="appState.currentPage='aktifitas'; render();" class="pill-btn px-4 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-semibold"><i class="fa-solid fa-arrow-left mr-1"></i> Kembali</button>
+                        </div>
+                        <p class="text-xs text-slate-300">Menampilkan seluruh transaksi pengeluaran barang keluar berdasarkan tanggal bon dan sisa stok.</p>
+                        ${renderMutasiTable('KELUAR')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderMutasiMasuk() {
+            return `
+                <div class="flex-1 flex flex-col p-4 max-w-5xl mx-auto w-full">
+                    ${renderTopBar()}
+                    <div class="glass-panel p-6 rounded-2xl shadow-xl space-y-6">
+                        <div class="flex justify-between items-center border-b border-slate-700 pb-4">
+                            <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-truck-field text-emerald-400 mr-2"></i> Mutasi Barang Masuk</h3>
+                            <button onclick="appState.currentPage='aktifitas'; render();" class="pill-btn px-4 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-semibold"><i class="fa-solid fa-arrow-left mr-1"></i> Kembali</button>
+                        </div>
+                        <p class="text-xs text-slate-300">Menampilkan seluruh transaksi pemasukan barang berdasarkan tanggal bon dan sisa stok.</p>
+                        ${renderMutasiTable('MASUK')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderMutasiTable(typeKeyword) {
+            const list = appState.transactions.filter(t => t.type.toUpperCase().includes(typeKeyword));
+            return `
+                <div class="overflow-x-auto rounded-xl border border-slate-800">
+                    <table class="w-full text-left text-xs text-slate-200">
+                        <thead class="bg-slate-900 uppercase text-slate-400 font-semibold">
+                            <tr>
+                                <th class="p-3">Tanggal Bon</th>
+                                <th class="p-3">No Bon</th>
+                                <th class="p-3">Keterangan / Tujuan</th>
+                                <th class="p-3">Item Barang</th>
+                                <th class="p-3 text-right">Total Qty</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800">
+                            ${list.length > 0 ? list.map(t => `
+                                <tr class="hover:bg-slate-800/50">
+                                    <td class="p-3">${t.tanggalBon || t.tanggal}</td>
+                                    <td class="p-3 font-mono text-sky-300">${t.noBon}</td>
+                                    <td class="p-3">${t.keterangan || '-'}</td>
+                                    <td class="p-3">${t.items.map(i => i.nama + ' (' + i.qty + ')').join(', ')}</td>
+                                    <td class="p-3 text-right font-bold text-emerald-400">${t.items.reduce((a,b)=>a+b.qty,0)}</td>
+                                </tr>
+                            `).join('') : `<tr><td colspan="5" class="p-6 text-center text-slate-400">Tidak ada mutasi ${typeKeyword.toLowerCase()}.</td></tr>`}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+
+        function renderPencarianBarang() {
+            const filtered = appState.masterData.filter(item => 
+                item.nama.toLowerCase().includes(appState.searchTerm.toLowerCase()) || 
+                item.kode.toLowerCase().includes(appState.searchTerm.toLowerCase())
+            );
+
+            return `
+                <div class="flex-1 flex flex-col p-4 max-w-7xl mx-auto w-full">
+                    ${renderTopBar()}
+                    <div class="glass-panel p-6 rounded-2xl shadow-xl flex-1 flex flex-col">
+                        <div class="flex flex-wrap justify-between items-center gap-4 border-b border-slate-700 pb-4 mb-4">
+                            <div>
+                                <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-magnifying-glass text-emerald-400 mr-2"></i> Pencarian Barang & Pilih Cepat (✓)</h3>
+                                <p class="text-xs text-slate-400">Klik centang ✓ untuk memilih barang secara instan tanpa mengetik ulang</p>
+                            </div>
+                            <button onclick="appState.currentPage='dashboard'; render();" class="pill-btn px-4 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-semibold"><i class="fa-solid fa-arrow-left mr-1"></i> Dashboard</button>
+                        </div>
+
+                        <div class="mb-4">
+                            <input type="text" placeholder="Ketik Nama atau Kode Barang untuk cari instan..." value="${appState.searchTerm}" oninput="appState.searchTerm=this.value; render();" class="w-full px-4 py-3 rounded-xl glass-input text-sm">
+                        </div>
+
+                        <div class="flex-1 overflow-x-auto overflow-y-auto max-h-[50vh] rounded-xl border border-slate-800">
+                            <table class="w-full text-left text-xs text-slate-200">
+                                <thead class="bg-slate-900 sticky top-0 uppercase text-slate-400 font-semibold">
+                                    <tr>
+                                        <th class="p-3 text-center w-16">Pilih (✓)</th>
+                                        <th class="p-3">SKU</th>
+                                        <th class="p-3">Kode</th>
+                                        <th class="p-3">Nama Barang</th>
+                                        <th class="p-3">Isi</th>
+                                        <th class="p-3 text-right">Stok Tersedia</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-800">
+                                    ${filtered.slice(0, 100).map(item => {
+                                        const isSelected = appState.activeCart.some(c => c.id === item.id);
+                                        return `
+                                            <tr class="hover:bg-slate-800/50 ${isSelected ? 'bg-sky-900/30' : ''}">
+                                                <td class="p-3 text-center">
+                                                    <button onclick="toggleSelectItem(${item.id})" class="w-8 h-8 rounded-lg ${isSelected ? 'bg-emerald-600 text-white' : 'bg-slate-700 text-slate-400'} flex items-center justify-center font-bold">
+                                                        ${isSelected ? '<i class="fa-solid fa-check"></i>' : '+'}
+                                                    </button>
+                                                </td>
+                                                <td class="p-3 font-mono text-sky-300">${item.sku}</td>
+                                                <td class="p-3 font-mono">${item.kode}</td>
+                                                <td class="p-3 font-medium text-white">${item.nama}</td>
+                                                <td class="p-3 text-slate-300">${item.isi}</td>
+                                                <td class="p-3 text-right font-bold text-emerald-400">${Number(item.jumlah).toLocaleString()}</td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="mt-4 p-4 glass-panel rounded-xl flex justify-between items-center border border-sky-500/50">
+                            <div>
+                                <span class="text-xs font-bold text-sky-400">Item Terpilih (Cart): <span class="text-white">${appState.activeCart.length} item</span></span>
+                            </div>
+                            <button onclick="appState.activeCart=[]; render();" class="text-xs text-rose-400 hover:text-rose-300 font-semibold">Reset Pilihan</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function toggleSelectItem(id) {
+            const item = appState.masterData.find(i => i.id === id);
+            if (!item) return;
+            const idx = appState.activeCart.findIndex(c => c.id === id);
+            if (idx >= 0) {
+                appState.activeCart.splice(idx, 1);
+            } else {
+                appState.activeCart.push({ ...item, qty: 1 });
+            }
+            render();
+        }
+
+        function renderStokOpname() {
+            return `
+                <div class="flex-1 flex flex-col p-4 max-w-5xl mx-auto w-full">
+                    ${renderTopBar()}
+                    <div class="glass-panel p-6 rounded-2xl shadow-xl space-y-6">
+                        <div class="flex justify-between items-center border-b border-slate-700 pb-4">
+                            <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-clipboard-check text-rose-400 mr-2"></i> STOK OPNAME GUDANG</h3>
+                            <button onclick="appState.currentPage='dashboard'; render();" class="pill-btn px-4 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-semibold"><i class="fa-solid fa-arrow-left mr-1"></i> Dashboard</button>
+                        </div>
+                        <p class="text-xs text-slate-300">Input stok fisik opname gudang untuk mencocokkan selisih sistem tanpa menampilkan harga.</p>
+                        
+                        <div class="overflow-x-auto rounded-xl border border-slate-800">
+                            <table class="w-full text-left text-xs text-slate-200">
+                                <thead class="bg-slate-900 uppercase text-slate-400 font-semibold">
+                                    <tr>
+                                        <th class="p-3">SKU</th>
+                                        <th class="p-3">Nama Barang</th>
+                                        <th class="p-3 text-right">Stok Sistem</th>
+                                        <th class="p-3 text-right">Stok Fisik Opname</th>
+                                        <th class="p-3 text-right">Selisih</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-800">
+                                    ${appState.masterData.slice(0, 20).map(item => `
+                                        <tr class="hover:bg-slate-800/50">
+                                            <td class="p-3 font-mono text-sky-300">${item.sku}</td>
+                                            <td class="p-3 font-medium text-white">${item.nama}</td>
+                                            <td class="p-3 text-right font-bold text-slate-300">${item.jumlah}</td>
+                                            <td class="p-3 text-right">
+                                                <input type="number" value="${item.jumlah}" class="w-20 px-2 py-1 rounded glass-input text-right text-xs" onchange="updateOpname(${item.id}, this.value)">
+                                            </td>
+                                            <td class="p-3 text-right font-bold text-emerald-400">0</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateOpname(id, val) {
+            const item = appState.masterData.find(i => i.id === id);
+            if (item) {
+                item.jumlah = parseInt(val) || 0;
+                saveData();
+            }
+        }
+
+        function renderLaporan() {
+            return `
+                <div class="flex-1 flex flex-col p-4 max-w-5xl mx-auto w-full">
+                    ${renderTopBar()}
+                    <div class="glass-panel p-6 rounded-2xl shadow-xl space-y-6">
+                        <div class="flex justify-between items-center border-b border-slate-700 pb-4">
+                            <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-file-lines text-teal-400 mr-2"></i> LAPORAN SEMUA TRANSAKSI</h3>
+                            <button onclick="appState.currentPage='dashboard'; render();" class="pill-btn px-4 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-semibold"><i class="fa-solid fa-arrow-left mr-1"></i> Dashboard</button>
+                        </div>
+                        
+                        <div class="overflow-x-auto rounded-xl border border-slate-800">
+                            <table class="w-full text-left text-xs text-slate-200">
+                                <thead class="bg-slate-900 uppercase text-slate-400 font-semibold">
+                                    <tr>
+                                        <th class="p-3">Tanggal</th>
+                                        <th class="p-3">Tipe</th>
+                                        <th class="p-3">No Bon</th>
+                                        <th class="p-3">Detail Transaksi</th>
+                                        <th class="p-3 text-center">Cetak</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-800">
+                                    ${appState.transactions.length > 0 ? appState.transactions.map((t, idx) => `
+                                        <tr class="hover:bg-slate-800/50">
+                                            <td class="p-3">${t.tanggal}</td>
+                                            <td class="p-3 font-bold text-amber-400 uppercase">${t.type}</td>
+                                            <td class="p-3 font-mono text-sky-300">${t.noBon}</td>
+                                            <td class="p-3">${t.items.map(i => i.nama + ' (' + i.qty + ')').join(', ')}</td>
+                                            <td class="p-3 text-center">
+                                                <button onclick="printTransaction(${idx})" class="pill-btn px-3 py-1 bg-sky-600 hover:bg-sky-500 text-white font-bold"><i class="fa-solid fa-print"></i> Cetak</button>
+                                            </td>
+                                        </tr>
+                                    `).join('') : `<tr><td colspan="5" class="p-6 text-center text-slate-400">Belum ada laporan transaksi.</td></tr>`}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function printTransaction(idx) {
+            const t = appState.transactions[idx];
+            if (!t) return;
+            const win = window.open('', '_blank');
+            win.document.write(`
+                <html><head><title>Cetak Bon ${t.noBon}</title><style>body{font-family:sans-serif;padding:20px;}table{width:100%;border-collapse:collapse;margin-top:20px;}th,td{border:1px solid #ddd;padding:8px;text-align:left;}th{background:#f2f2f2;}</style></head>
+                <body>
+                    <h2>${appState.settings.ptName}</h2>
+                    <p>${appState.settings.address}</p>
+                    <hr>
+                    <h3>BUKTI TRANSAKSI: ${t.type}</h3>
+                    <p><b>No Bon:</b> ${t.noBon} | <b>Tanggal:</b> ${t.tanggal}</p>
+                    <p><b>Keterangan:</b> ${t.keterangan || '-'}</p>
+                    <table>
+                        <thead><tr><th>No</th><th>Nama Barang</th><th>Qty</th></tr></thead>
+                        <tbody>
+                            ${t.items.map((i, index) => `<tr><td>${index+1}</td><td>${i.nama}</td><td>${i.qty}</td></tr>`).join('')}
+                        </tbody>
+                    </table>
+                    <br><br>
+                    <div style="display:flex; justify-content:space-between;">
+                        <p>Checker: <b>${appState.settings.checker}</b></p>
+                        <p>Driver / Penerima</p>
+                    </div>
+                </body></html>
+            `);
+            win.document.close();
+            win.print();
+        }
+
+        function renderTransaksiMenu() {
+            return `
+                <div class="flex-1 flex flex-col p-4 max-w-4xl mx-auto w-full">
+                    ${renderTopBar()}
+                    <div class="glass-panel p-6 rounded-2xl shadow-xl space-y-6">
+                        <div class="flex justify-between items-center border-b border-slate-700 pb-4">
+                            <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-right-left text-blue-400 mr-2"></i> Menu Transaksi Gudang Implora</h3>
+                            <button onclick="appState.currentPage='dashboard'; render();" class="pill-btn px-4 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-semibold"><i class="fa-solid fa-arrow-left mr-1"></i> Dashboard</button>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <button onclick="openTransaksiForm('MASUK')" class="pill-btn glass-panel p-6 flex flex-col items-center justify-center text-center hover:bg-slate-800 border border-slate-700">
+                                <div class="p-3 bg-emerald-500/20 text-emerald-400 rounded-full mb-2 text-xl"><i class="fa-solid fa-circle-down"></i></div>
+                                <h4 class="text-sm font-bold text-white">INPUT BARANG MASUK</h4>
+                                <p class="text-[11px] text-slate-400 mt-1">Principal, Intra Cabang, CM, Retur</p>
+                            </button>
+                            <button onclick="openTransaksiForm('KELUAR')" class="pill-btn glass-panel p-6 flex flex-col items-center justify-center text-center hover:bg-slate-800 border border-slate-700">
+                                <div class="p-3 bg-rose-500/20 text-rose-400 rounded-full mb-2 text-xl"><i class="fa-solid fa-circle-up"></i></div>
+                                <h4 class="text-sm font-bold text-white">INPUT BARANG KELUAR</h4>
+                                <p class="text-[11px] text-slate-400 mt-1">Bon, Retur, Intra</p>
+                            </button>
+                            <button onclick="openTransaksiForm('LUAR_KOTA')" class="pill-btn glass-panel p-6 flex flex-col items-center justify-center text-center hover:bg-slate-800 border border-slate-700">
+                                <div class="p-3 bg-amber-500/20 text-amber-400 rounded-full mb-2 text-xl"><i class="fa-solid fa-truck-fast"></i></div>
+                                <h4 class="text-sm font-bold text-white">INPUT BON LUAR KOTA</h4>
+                                <p class="text-[11px] text-slate-400 mt-1">Masuk & Keluar Luar Kota</p>
+                            </button>
+                            <button onclick="openTransaksiForm('TITIPAN')" class="pill-btn glass-panel p-6 flex flex-col items-center justify-center text-center hover:bg-slate-800 border border-slate-700">
+                                <div class="p-3 bg-purple-500/20 text-purple-400 rounded-full mb-2 text-xl"><i class="fa-solid fa-boxes-packing"></i></div>
+                                <h4 class="text-sm font-bold text-white">INPUT BARANG TITIPAN</h4>
+                                <p class="text-[11px] text-slate-400 mt-1">Masuk & Keluar Titipan</p>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        let currentTxType = 'MASUK';
+        let currentSubCategory = 'PRINCIPAL';
+
+        function openTransaksiForm(type) {
+            currentTxType = type;
+            currentSubCategory = type === 'MASUK' ? 'PRINCIPAL' : type === 'KELUAR' ? 'BON' : type === 'LUAR_KOTA' ? 'MASUK' : 'MASUK';
+            appState.currentPage = 'transaksi_form';
+            appState.activeCart = [];
+            render();
+        }
+
+        function renderTransaksiForm() {
+            const today = new Date().toISOString().split('T')[0];
+            return `
+                <div class="flex-1 flex flex-col p-4 max-w-5xl mx-auto w-full pb-24">
+                    ${renderTopBar()}
+                    <div class="glass-panel p-6 rounded-2xl shadow-xl space-y-6">
+                        <div class="flex justify-between items-center border-b border-slate-700 pb-4">
+                            <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-file-pen text-sky-400 mr-2"></i> INPUT TRANSAKSI: ${currentTxType}</h3>
+                            <button onclick="appState.currentPage='transaksi'; render();" class="pill-btn px-4 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-semibold"><i class="fa-solid fa-arrow-left mr-1"></i> Kembali</button>
+                        </div>
+
+                        <div class="flex flex-wrap gap-2">
+                            ${currentTxType === 'MASUK' ? `
+                                <button onclick="currentSubCategory='PRINCIPAL'; render();" class="pill-btn px-4 py-2 text-xs font-bold ${currentSubCategory==='PRINCIPAL'?'bg-sky-600 text-white':'bg-slate-800 text-slate-400'}">PRINCIPAL</button>
+                                <button onclick="currentSubCategory='INTRA'; render();" class="pill-btn px-4 py-2 text-xs font-bold ${currentSubCategory==='INTRA'?'bg-sky-600 text-white':'bg-slate-800 text-slate-400'}">INTRA</button>
+                                <button onclick="currentSubCategory='CM'; render();" class="pill-btn px-4 py-2 text-xs font-bold ${currentSubCategory==='CM'?'bg-sky-600 text-white':'bg-slate-800 text-slate-400'}">CM</button>
+                                <button onclick="currentSubCategory='RETUR'; render();" class="pill-btn px-4 py-2 text-xs font-bold ${currentSubCategory==='RETUR'?'bg-sky-600 text-white':'bg-slate-800 text-slate-400'}">RETUR</button>
+                            ` : currentTxType === 'KELUAR' ? `
+                                <button onclick="currentSubCategory='BON'; render();" class="pill-btn px-4 py-2 text-xs font-bold ${currentSubCategory==='BON'?'bg-sky-600 text-white':'bg-slate-800 text-slate-400'}">BON</button>
+                                <button onclick="currentSubCategory='RETUR'; render();" class="pill-btn px-4 py-2 text-xs font-bold ${currentSubCategory==='RETUR'?'bg-sky-600 text-white':'bg-slate-800 text-slate-400'}">RETUR</button>
+                                <button onclick="currentSubCategory='INTRA'; render();" class="pill-btn px-4 py-2 text-xs font-bold ${currentSubCategory==='INTRA'?'bg-sky-600 text-white':'bg-slate-800 text-slate-400'}">INTRA</button>
+                            ` : `
+                                <button onclick="currentSubCategory='MASUK'; render();" class="pill-btn px-4 py-2 text-xs font-bold ${currentSubCategory==='MASUK'?'bg-sky-600 text-white':'bg-slate-800 text-slate-400'}">MASUK</button>
+                                <button onclick="currentSubCategory='KELUAR'; render();" class="pill-btn px-4 py-2 text-xs font-bold ${currentSubCategory==='KELUAR'?'bg-sky-600 text-white':'bg-slate-800 text-slate-400'}">KELUAR</button>
+                            `}
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">Tanggal</label>
+                                <input type="date" id="tx-tanggal" value="${today}" class="w-full px-4 py-2 rounded-xl glass-input text-xs">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">Tanggal Bon</label>
+                                <input type="date" id="tx-tgl-bon" value="${today}" class="w-full px-4 py-2 rounded-xl glass-input text-xs">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">No Bon</label>
+                                <input type="text" id="tx-no-bon" placeholder="BON-00123" class="w-full px-4 py-2 rounded-xl glass-input text-xs" required>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">Pengiriman (1-7)</label>
+                                <select id="tx-pengiriman" class="w-full px-4 py-2 rounded-xl glass-input text-xs">
+                                    ${appState.settings.deliveries.map(d => `<option value="${d}">Pengiriman ${d}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">Nomor Kendaraan</label>
+                                <select id="tx-kendaraan" class="w-full px-4 py-2 rounded-xl glass-input text-xs">
+                                    ${appState.settings.vehicles.map(v => `<option value="${v}">${v}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-slate-300 mb-1">Driver</label>
+                                <select id="tx-driver" class="w-full px-4 py-2 rounded-xl glass-input text-xs">
+                                    ${appState.settings.drivers.map(drv => `<option value="${drv}">${drv}</option>`).join('')}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="border-t border-slate-700 pt-4">
+                            <h4 class="text-sm font-bold text-white mb-2"><i class="fa-solid fa-list-check mr-2 text-emerald-400"></i> Pilih Barang (Centang ✓ untuk Input Banyak)</h4>
+                            <input type="text" placeholder="Cari nama barang..." oninput="appState.searchTerm=this.value; render();" class="w-full px-4 py-2 rounded-xl glass-input text-xs mb-3">
+
+                            <div class="max-h-60 overflow-y-auto rounded-xl border border-slate-800">
+                                <table class="w-full text-left text-xs text-slate-200">
+                                    <thead class="bg-slate-900 sticky top-0 uppercase text-slate-400 font-semibold">
+                                        <tr>
+                                            <th class="p-2 text-center w-12">✓</th>
+                                            <th class="p-2">Kode</th>
+                                            <th class="p-2">Nama Barang</th>
+                                            <th class="p-2 text-right">Stok</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-800">
+                                        ${appState.masterData.filter(i => i.nama.toLowerCase().includes(appState.searchTerm.toLowerCase())).slice(0, 50).map(item => {
+                                            const isSel = appState.activeCart.some(c => c.id === item.id);
+                                            return `
+                                                <tr class="hover:bg-slate-800/50 ${isSel ? 'bg-sky-900/30' : ''}">
+                                                    <td class="p-2 text-center">
+                                                        <button type="button" onclick="toggleSelectItem(${item.id})" class="w-6 h-6 rounded ${isSel ? 'bg-emerald-600 text-white' : 'bg-slate-700 text-slate-400'} font-bold">
+                                                            ${isSel ? '✓' : '+'}
+                                                        </button>
+                                                    </td>
+                                                    <td class="p-2 font-mono">${item.kode}</td>
+                                                    <td class="p-2 font-medium text-white">${item.nama}</td>
+                                                    <td class="p-2 text-right font-bold text-emerald-400">${item.jumlah}</td>
+                                                </tr>
+                                            `;
+                                        }).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        ${appState.activeCart.length > 0 ? `
+                            <div class="fixed bottom-0 left-0 right-0 glass-panel border-t border-sky-500 p-4 shadow-2xl z-50 flex flex-col gap-2 max-w-4xl mx-auto rounded-t-2xl">
+                                <h4 class="text-xs font-bold text-sky-400">Barang Terpilih (${appState.activeCart.length} item) - Masukkan Jumlah Qty:</h4>
+                                <div class="max-h-32 overflow-y-auto space-y-2">
+                                    ${appState.activeCart.map((c, idx) => `
+                                        <div class="flex justify-between items-center bg-slate-900/80 px-3 py-1.5 rounded-xl text-xs">
+                                            <span class="text-white font-medium truncate max-w-xs">${c.nama}</span>
+                                            <input type="number" min="1" value="${c.qty}" onchange="updateCartQty(${c.id}, this.value)" class="w-20 px-2 py-1 rounded glass-input text-right text-xs">
+                                        </div>
+                                    `).join('')}
+                                </div>
+                                <button onclick="submitTransaction()" class="pill-btn w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm shadow-lg">
+                                    Simpan & Proses Transaksi (${currentTxType} - ${currentSubCategory})
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateCartQty(id, qty) {
+            const item = appState.activeCart.find(c => c.id === id);
+            if (item) {
+                item.qty = parseInt(qty) || 1;
+            }
+        }
+
+        function submitTransaction() {
+            const noBon = document.getElementById('tx-no-bon').value;
+            if (!noBon) {
+                alert("Nomor Bon wajib diisi!");
+                return;
+            }
+            if (appState.activeCart.length === 0) {
+                alert("Pilih minimal 1 item barang!");
+                return;
+            }
+
+            const newTx = {
+                id: Date.now(),
+                type: `${currentTxType} - ${currentSubCategory}`,
+                noBon: noBon,
+                tanggal: document.getElementById('tx-tanggal').value,
+                tanggalBon: document.getElementById('tx-tgl-bon').value,
+                pengiriman: document.getElementById('tx-pengiriman').value,
+                kendaraan: document.getElementById('tx-kendaraan').value,
+                driver: document.getElementById('tx-driver').value,
+                items: [...appState.activeCart],
+                keterangan: 'Transaksi Gudang Implora'
+            };
+
+            appState.transactions.unshift(newTx);
+
+            appState.activeCart.forEach(cartItem => {
+                const master = appState.masterData.find(m => m.id === cartItem.id);
+                if (master) {
+                    if (currentTxType === 'MASUK') {
+                        master.jumlah += cartItem.qty;
+                    } else {
+                        master.jumlah = Math.max(0, master.jumlah - cartItem.qty);
+                    }
+                }
+            });
+
+            saveData();
+            appState.activeCart = [];
+            alert("Transaksi berhasil disimpan dan stok gudang telah diperbarui!");
+            appState.currentPage = 'laporan';
+            render();
+        }
+
+        function backupData() {
+            const data = JSON.stringify(appState);
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', `backup_gudang_implora_${new Date().toISOString().split('T')[0]}.json`);
+            a.click();
+        }
+
+        function restoreDataPrompt() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = e => {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = evt => {
+                    try {
+                        const parsed = JSON.parse(evt.target.result);
+                        if (parsed.masterData && parsed.transactions) {
+                            appState = parsed;
+                            saveData();
+                            alert("Restore data berhasil!");
+                            render();
+                        } else {
+                            alert("Format file backup tidak valid.");
+                        }
+                    } catch(err) {
+                        alert("Gagal memparsing file JSON.");
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
+        }
+
+        function downloadDataCSV() {
+            exportMasterCSV();
+        }
+
+        window.onload = function() {
+            seedInitialData();
+            render();
+        };
+    </script>
+</body>
+</html>
